@@ -1,0 +1,33 @@
+
+# Load the image
+img = cv2.imread("/content/pomegranate.jpg")
+
+# Convert the image to grayscale
+gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+# Set the compression ratio to 0
+compression_ratio = 0.1
+
+# Perform the wavelet decomposition to obtain the subbands
+coeffs = pywt.wavedec2(gray_img, 'haar', level=2)
+
+# Perform SVD on each subband and compress using desired ratio
+compressed_coeffs = []
+for i in range(1, len(coeffs)):
+    cH, cV, cD = coeffs[i]
+    U_h, S_h, Vt_h = np.linalg.svd(cH)
+    U_v, S_v, Vt_v = np.linalg.svd(cV)
+    U_d, S_d, Vt_d = np.linalg.svd(cD)
+    threshold = np.max(np.abs(cH)) * compression_ratio
+    compressed_coeff = [pywt.threshold(cH, threshold, mode='soft'),
+                        pywt.threshold(cV, threshold, mode='soft'),
+                        pywt.threshold(cD, threshold, mode='soft')]
+    compressed_coeffs.append(tuple(compressed_coeff))
+
+# Reconstruct the compressed image from the compressed coefficients
+compressed_img = pywt.waverec2([coeffs[0]] + compressed_coeffs, 'haar')
+
+# Display the original and compressed images side by side
+cv2_imshow(gray_img)
+cv2_imshow(compressed_img)
+cv2.waitKey(0)
